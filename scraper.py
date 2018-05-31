@@ -85,28 +85,41 @@ def convert_mth_strings ( mth_string ):
 
 #### VARIABLES 1.0
 
-entity_id = "E0931_ABC_gov"
-url = "https://www.allerdale.gov.uk/en/about-council/budget-and-spending/spending-council/"
+entity_id = "E1831_BDC_gov"
+url = "http://www.bromsgrove.gov.uk/council/finance/supplier-payments-over-%C2%A3500.aspx"
 errors = 0
 data = []
 
 
 #### READ HTML 1.0
+import requests
 
-html = urllib2.urlopen(url)
-soup = BeautifulSoup(html, "lxml")
+html = requests.get(url)
+soup = BeautifulSoup(html.text, 'lxml')
 
 #### SCRAPE DATA
 
-links = soup.find_all('a')
+links = soup.find_all('a', 'landing-link')
 for link in links:
-    file_name = link.text
-    if 'Spending' in file_name and '.csv' in link['href']:
-        url = link['href']
-        csvYr = file_name.replace('Spending ', '').strip()[-4:]
-        csvMth = file_name.replace('Spending ', '').strip()[:3]
-        csvMth = convert_mth_strings(csvMth.upper())
-        data.append([csvYr, csvMth, url])
+    if 'http' not in link['href']:
+        year_url = 'http://www.bromsgrove.gov.uk' + link['href']
+    else:
+        year_url = link['href']
+    year_html = requests.get(year_url)
+    year_soup = BeautifulSoup(year_html.text, 'lxml')
+    blocks = year_soup.find('div', 'col-lg-8').find_all('a')
+    for block in blocks:
+        if '.csv' in block['href']:
+            url = block['href']
+            if 'http' not in url:
+                url = 'http://www.bromsgrove.gov.uk' + url
+            else:
+                url = url
+            file_name = block.text.replace('csv', '').strip()
+            csvMth = file_name.split()[-2][:3]
+            csvYr = file_name[-4:]
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, url])
 
 
 #### STORE DATA 1.0
